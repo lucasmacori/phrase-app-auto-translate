@@ -5,8 +5,8 @@ import { createTranslationInPhrase, fetchKeys, fetchLocales, fetchTranslationsFo
 const mainTranslationCode = process.env.MAIN_TRANSLATION_CODE ?? 'en';
 const translator = new deepl.Translator(process.env.DEEPL_API_KEY);
 
-const getMissingTranslations = (translations) => 
-  ['fr', 'nl', 'es'].filter(
+const getMissingTranslations = (langs, translations) => 
+  langs.filter(
     (lang) => !translations.some(translation => translation?.locale?.code === lang)
   );
 
@@ -15,6 +15,7 @@ const translateKey = async (content, targetLang) => {
 };
 
 const locales = await fetchLocales();
+const langs = locales.map(locale => locale.code);
 (await fetchKeys()).forEach(async (key) => {
   const keyId = key?.id;
   if (!keyId || keyId === null) {
@@ -23,7 +24,7 @@ const locales = await fetchLocales();
   }
 
   const translations = await fetchTranslationsForKey(keyId);
-  const missingTranslationsForKey = getMissingTranslations(translations);
+  const missingTranslationsForKey = getMissingTranslations(langs, translations);
 
   missingTranslationsForKey.forEach(async (lang) => {
     const mainTranslation = translations.find(translation => translation?.locale?.code === mainTranslationCode);
