@@ -1,0 +1,21 @@
+{
+  "name": "phrase-app-auto-translate",
+  "version": "1.0.0",
+  "description": "An auto translate tool for phrase app that uses DeepL",
+  "main": "index.mjs",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "keywords": [
+    "phrase",
+    "translate",
+    "deepl",
+    "auto"
+  ],
+  "author": "lucasmacori",
+  "license": "ISC",
+  "dependencies": {
+    "deepl-node": "^1.16.0",
+    "dotenv": "^16.4.7"
+  }
+}
