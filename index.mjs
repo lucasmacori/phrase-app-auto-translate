@@ -10,6 +10,7 @@ const translator = new deepl.Translator(process.env.DEEPL_API_KEY);
 const dryRun = process.env?.DRY_RUN?.toLowerCase() == "true";
 const waitTime = process.env.WAIT_TIME_IN_MS ?? 200;
 const verbose = process.env.VERBOSE ?? false;
+const groupLanguages = process.env.GROUP_LANGUAGES?.toLowerCase() != "false";
 
 const wait = () => new Promise(res => setTimeout(res, waitTime));
 
@@ -26,14 +27,45 @@ const getMissingTranslations = (langs, translations) =>
   );
 
 const translateKey = async (content, targetLang) => {
-  const tranformedTargetLang = transformLang(targetLang);
-  printAction(`Translating ${content} to ${tranformedTargetLang}`);
+  printAction(`Translating ${content} to ${targetLang}`);
   try {
     return await translator.translateText(content, sourceLang, targetLang);
   } catch (ignored) {
     return;
   }
 };
+
+const translateMissingTranslations = async (langs, translations) => {
+  let translatedLangs = new Map();
+  const missingTranslationsForKey = getMissingTranslations(langs, translations);
+
+  for (const lang of missingTranslationsForKey) {
+    const mainTranslation = translations.find(translation => translation?.locale?.code === mainTranslationCode);
+    if (!mainTranslation) {
+      printAction(`No main translation found for key ${keyId}, skipping...`);
+      continue;
+    }
+     
+    const tranformedTargetLang = transformLang(lang);
+    let translation = translatedLangs.get(tranformedTargetLang);
+    if (!translation) {
+      translation = await translateKey(mainTranslation.content, tranformedTargetLang);
+
+      if (groupLanguages) {
+        translatedLangs.set(tranformedTargetLang, translation);
+      }
+    } else {
+     printAction(`Translation for ${tranformedTargetLang} already exists, using it instead of retranslating... To avoid this, disable groupLanguages setting`);
+    }
+
+    // If dryRun mode is enabled, do not send the translation and stop here
+    if (dryRun || !translation) {
+      continue;
+    }
+
+    createTranslationInPhrase(keyId, translation?.text, locales.find(locale => locale.code === lang).id);
+  };
+}
 
 const start = async (keys) => {
   for (const key of keys) {
@@ -46,24 +78,7 @@ const start = async (keys) => {
     await wait();
   
     const translations = await fetchTranslationsForKey(keyId);
-    const missingTranslationsForKey = getMissingTranslations(langs, translations);
-  
-    missingTranslationsForKey.forEach(async (lang) => {
-      const mainTranslation = translations.find(translation => translation?.locale?.code === mainTranslationCode);
-      if (!mainTranslation) {
-        printAction(`No main translation found for key ${keyId}, skipping...`);
-        return;
-      }
-      
-      const translation = await translateKey(mainTranslation.content, lang);
-  
-      // If dryRun mode is enabled, do not send the translation and stop here
-      if (dryRun || !translation) {
-        return;
-      }
-  
-      // createTranslationInPhrase(keyId, translation?.text, locales.find(locale => locale.code === lang).id);
-    });
+    translateMissingTranslations(langs, translations);
   }
 };
 
