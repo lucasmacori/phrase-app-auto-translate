@@ -6,12 +6,9 @@ const phraseProjectId = process.env.PHRASE_PROJECT_ID;
 const options = {
   headers: {
     Authorization: phraseAuth,
+    'Content-Type': 'application/json'
   }
 };
-const postOptions = {
-  ...options,
-  'Content-Type': 'application/json'
-}
 
 export const fetchLocales = async () => {
   printAction("Fetching locales");
@@ -31,6 +28,20 @@ export const fetchKeys = async () => {
   return await response.json();
 }
 
+export const fetchKeyByName = async (keyName) => {
+  printAction(`Fetching key by name: ${keyName}`);
+  const response = await fetch(`https://api.phrase.com/v2/projects/${phraseProjectId}/keys?q=name:${encodeURIComponent(keyName)}`, options);
+  if (!response.ok) {
+    throw new Error(`Could not fetch key. Status: ${response.status}`);
+  }
+  const keys = await response.json();
+  const exactMatch = keys.find(key => key.name === keyName);
+  if (!exactMatch) {
+    throw new Error(`Key "${keyName}" not found`);
+  }
+  return exactMatch;
+}
+
 export const fetchTranslationsForKey = async (keyId) => {
   printAction(`Fetching translations for key ${keyId}`);
   const response = await fetch(`https://api.phrase.com/v2/projects/${phraseProjectId}/keys/${keyId}/translations`, options);
@@ -47,7 +58,7 @@ export const fetchTranslationsForKey = async (keyId) => {
 };
 
 export const createTranslationInPhrase = async (keyId, content, locale) => {
-  printAction(`Sending ${translation?.text} for key ${keyId} for ${lang}`);
+  printAction(`Sending ${content} for key ${keyId} for ${locale}`);
   const response = await fetch(`https://api.phrase.com/v2/projects/${phraseProjectId}/translations`, {
     body: JSON.stringify({
       content,
@@ -55,7 +66,7 @@ export const createTranslationInPhrase = async (keyId, content, locale) => {
       locale_id: locale
     }),
     method: 'POST',
-    headers: postOptions,
+    ...options,
   });
   if (!response.ok) {
     throw new Error(`Could not create translation. Status: ${response.status}`);

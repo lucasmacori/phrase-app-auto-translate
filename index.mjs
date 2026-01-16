@@ -1,6 +1,11 @@
-import 'dotenv/config';
 import * as deepl from 'deepl-node';
-import { fetchKeys, fetchLocales, fetchTranslationsForKey } from './phrase.mjs';
+import 'dotenv/config';
+import { createTranslationInPhrase, fetchKeyByName, fetchKeys, fetchLocales, fetchTranslationsForKey } from './phrase.mjs';
+
+// Parse command-line arguments
+const args = process.argv.slice(2);
+const keyArgIndex = args.findIndex(arg => arg === '--key' || arg === '-k');
+const specificKeyName = keyArgIndex !== -1 ? args[keyArgIndex + 1] : null;
 
 const transformLang = (lang) =>  lang.indexOf('-') >= 0 ? lang.slice(0, lang.indexOf('-')) : lang;
 
@@ -20,7 +25,6 @@ export const printAction = (actionText) => {
   }
 }
 
-
 const getMissingTranslations = (langs, translations) => 
   langs.filter(
     (lang) => !translations.some(translation => translation?.locale?.code === lang)
@@ -30,13 +34,15 @@ const translateKey = async (content, targetLang) => {
   printAction(`Translating ${content} to ${targetLang}`);
   try {
     return await translator.translateText(content, sourceLang, targetLang);
-  } catch (ignored) {
+  } catch (error) {
+    console.log("[ERROR]", error);
     return;
   }
 };
 
-const translateMissingTranslations = async (langs, translations) => {
+const translateMissingTranslations = async (keyId, langs, translations) => {
   let translatedLangs = new Map();
+  console.log(langs, translations);
   const missingTranslationsForKey = getMissingTranslations(langs, translations);
 
   for (const lang of missingTranslationsForKey) {
@@ -49,13 +55,13 @@ const translateMissingTranslations = async (langs, translations) => {
     const tranformedTargetLang = transformLang(lang);
     let translation = translatedLangs.get(tranformedTargetLang);
     if (!translation) {
-      translation = await translateKey(mainTranslation.content, tranformedTargetLang);
+      translation = await translateKey(mainTranslation.content, lang);
 
       if (groupLanguages) {
         translatedLangs.set(tranformedTargetLang, translation);
       }
     } else {
-     printAction(`Translation for ${tranformedTargetLang} already exists, using it instead of retranslating... To avoid this, disable groupLanguages setting`);
+      printAction(`Translation for ${tranformedTargetLang} already exists, using it instead of retranslating... To avoid this, disable groupLanguages setting`);
     }
 
     // If dryRun mode is enabled, do not send the translation and stop here
@@ -68,6 +74,10 @@ const translateMissingTranslations = async (langs, translations) => {
 }
 
 const start = async (keys) => {
+  if (dryRun) {
+    console.log("Dry run mode is enabled, no translations will be updated");
+  }
+
   for (const key of keys) {
     const keyId = key?.id;
     if (!keyId || keyId === null) {
@@ -78,16 +88,20 @@ const start = async (keys) => {
     await wait();
   
     const translations = await fetchTranslationsForKey(keyId);
-    translateMissingTranslations(langs, translations);
+    await translateMissingTranslations(keyId, langs, translations);
   }
 };
 
-if (dryRun) {
-  console.log("Dry run mode is enabled, no translations will be updated");
-}
-
 const locales = await fetchLocales();
 const langs = locales.map(locale => locale.code);
-const keys = await fetchKeys();
+
+let keys;
+if (specificKeyName) {
+  console.log(`Translating specific key: ${specificKeyName}`);
+  const key = await fetchKeyByName(specificKeyName);
+  keys = [key];
+} else {
+  keys = await fetchKeys();
+}
 
 await start(keys);
