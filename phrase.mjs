@@ -1,4 +1,4 @@
-import { printAction } from "./index.mjs";
+import { printAction, wait } from "./index.mjs";
 
 const phraseAuth = process.env.PHRASE_AUTH;
 const phraseProjectId = process.env.PHRASE_PROJECT_ID;
@@ -12,6 +12,7 @@ const options = {
 
 export const fetchLocales = async () => {
   printAction("Fetching locales");
+  await wait();
   const response = await fetch(`https://api.phrase.com/v2/projects/${phraseProjectId}/locales`, options);
   if (!response.ok) {
     throw new Error(`Could not fetch locales. Status: ${response.status}`);
@@ -21,6 +22,7 @@ export const fetchLocales = async () => {
 
 export const fetchKeys = async () => {
   printAction("Fetching keys");
+  await wait();
   const response = await fetch(`https://api.phrase.com/v2/projects/${phraseProjectId}/keys`, options);
   if (!response.ok) {
     throw new Error(`Could not fetch keys. Status: ${response.status}`);
@@ -30,6 +32,7 @@ export const fetchKeys = async () => {
 
 export const fetchKeyByName = async (keyName) => {
   printAction(`Fetching key by name: ${keyName}`);
+  await wait();
   const response = await fetch(`https://api.phrase.com/v2/projects/${phraseProjectId}/keys?q=name:${encodeURIComponent(keyName)}`, options);
   if (!response.ok) {
     throw new Error(`Could not fetch key. Status: ${response.status}`);
@@ -44,6 +47,7 @@ export const fetchKeyByName = async (keyName) => {
 
 export const fetchTranslationsForKey = async (keyId) => {
   printAction(`Fetching translations for key ${keyId}`);
+  await wait();
   const response = await fetch(`https://api.phrase.com/v2/projects/${phraseProjectId}/keys/${keyId}/translations`, options);
   if (!response.ok) {
     throw new Error(`Could not fetch translations. Status: ${response.status}`);
@@ -59,6 +63,7 @@ export const fetchTranslationsForKey = async (keyId) => {
 
 export const createTranslationInPhrase = async (keyId, content, locale) => {
   printAction(`Sending ${content} for key ${keyId} for ${locale}`);
+  await wait();
   const response = await fetch(`https://api.phrase.com/v2/projects/${phraseProjectId}/translations`, {
     body: JSON.stringify({
       content,

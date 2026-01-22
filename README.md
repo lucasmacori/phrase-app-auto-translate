@@ -16,8 +16,18 @@ All configuration is done through the **.env** config file.
 
 ## Run the tool
 
+Translate all untranslated keys:
+
 ```shell
 npm run start
+```
+
+Translate a specific key:
+
+```shell
+npm run start -- --key "your.key.name"
+# or
+npm run start -- -k "your.key.name"
 ```
 
 ## Warranty

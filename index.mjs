@@ -13,11 +13,11 @@ const mainTranslationCode = process.env.MAIN_TRANSLATION_CODE ?? 'en';
 const sourceLang = transformLang(mainTranslationCode);
 const translator = new deepl.Translator(process.env.DEEPL_API_KEY);
 const dryRun = process.env?.DRY_RUN?.toLowerCase() == "true";
-const waitTime = process.env.WAIT_TIME_IN_MS ?? 200;
+const waitTime = process.env.WAIT_TIME_IN_MS ?? 500;
 const verbose = process.env.VERBOSE ?? false;
 const groupLanguages = process.env.GROUP_LANGUAGES?.toLowerCase() != "false";
 
-const wait = () => new Promise(res => setTimeout(res, waitTime));
+export const wait = () => new Promise(res => setTimeout(res, waitTime));
 
 export const printAction = (actionText) => {
   if (verbose) {
@@ -55,7 +55,7 @@ const translateMissingTranslations = async (keyId, langs, translations) => {
     const tranformedTargetLang = transformLang(lang);
     let translation = translatedLangs.get(tranformedTargetLang);
     if (!translation) {
-      translation = await translateKey(mainTranslation.content, lang);
+      translation = await translateKey(mainTranslation.content, tranformedTargetLang);
 
       if (groupLanguages) {
         translatedLangs.set(tranformedTargetLang, translation);
@@ -84,8 +84,6 @@ const start = async (keys) => {
       printAction(`Skipping one key because is undefined or null`);
       continue;
     }
-  
-    await wait();
   
     const translations = await fetchTranslationsForKey(keyId);
     await translateMissingTranslations(keyId, langs, translations);
